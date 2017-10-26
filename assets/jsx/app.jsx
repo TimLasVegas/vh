@@ -65,7 +65,7 @@ class ButtonSearch extends React.Component {
         var yt = new Youtube();
         yt.search(this.props.make + ' ' + this.props.model).then(
             function (results) {
-                self.props.handleClick(results, true);
+                self.props.handleClick(results);
             }
         );
     }
@@ -178,21 +178,19 @@ class App extends React.Component {
     handleMakeChange(make) {
         this.setState({
             selectedMake: make,
-            selectedModel: ''
+            selectedModel: '',
+            videos: [],
+            nextPageToken: '',
+            disabledModel: (make == ''),
+            disabledSearch: (make == '')
         });
         if (make == '') {
             this.setState({
-                disabledModel : true,
-                disabledSearch : true,
                 optionsModel: [
                     {value: '', label: 'Model'}
                 ]
             });
         } else {
-            this.setState({
-                disabledModel: false,
-                disabledSearch: false
-            });
             if (make == 'Honda') {
                 this.setState({
                     selectedModel: 'Accord',
@@ -226,18 +224,21 @@ class App extends React.Component {
      * @param model
      */
     handleModelChange(model) {
-        this.setState({selectedModel: model});
+        this.setState({
+            selectedModel: model,
+            videos: [],
+            nextPageToken: ''
+        });
     }
 
 
     /**
      * Called with new search results
      * @param results   Videos that were received
-     * @param clear     True to clear the array of videos
      */
-    handleSearch(results, clear) {
+    handleSearch(results) {
         this.setState({
-            videos: (clear) ? results.items : this.state.videos.concat(results.items),
+            videos: this.state.videos.concat(results.items),
             nextPageToken: (results.hasOwnProperty("nextPageToken")) ? results.nextPageToken : ''
         });
     }
