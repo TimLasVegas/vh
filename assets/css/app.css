@@ -1,0 +1,111 @@
+
+
+.header {
+    height: 100px;
+    padding: 10px;
+}
+.header .col {
+    padding: 10px;
+}
+.header .title {
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.content .row {
+    border: 1px solid #000;
+}
+
+.search-options {
+    padding: 10px;
+}
+
+.content .youtube {
+    text-align: center;
+    padding-bottom: 10px;
+}
+@media only screen and (min-width : 768px) {
+    .content .youtube {
+        text-align: center;
+        min-height: 400px;
+        padding-bottom: 0;
+    }
+}
+.content .youtube img {
+    width: 100%;
+}
+#ad1 {
+    width: 100%;
+    background-color: aquamarine;
+    height: 200px;
+    text-align: center;
+}
+
+.video-list {
+    background-color: #333;
+    white-space: nowrap;
+}
+@media only screen and (min-width : 768px) {
+    .video-list {
+        background-color: #333;
+        overflow-x: auto;
+        white-space: nowrap;
+        height: 600px;
+    }
+}
+
+.video-list .video-thumbnail {
+    display: block;
+    color: white;
+    text-decoration: none;
+    padding: 20px;
+    width: 100%;
+    text-align: left;
+    vertical-align: text-top;
+    white-space: normal;
+    overflow: hidden;
+
+}
+
+.video-list .video-thumbnail img {
+    width: 100%;
+}
+.video-list .video-thumbnail .title {
+    font-size: 10px;
+}
+.video-list .video-thumbnail .description {
+    font-size: 10px;
+}
+
+.footer {
+    padding: 5px;
+}
+.mobile-footer {
+    background-color: aquamarine;
+    height: 30px;
+    width: 100%;
+}
+
+.desktop-footer {
+    width: 100%;
+    background-color: aquamarine;
+    height: 30px;
+    position: absolute;
+    bottom: 0px;
+}
+
+@media only screen and (min-width : 768px) {
+    .mobile-footer {
+        display: none;
+    }
+}
+@media only screen and (max-width : 767px) {
+    .desktop-footer {
+        display: none;
+    }
+}
+
+#more-videos {
+    height: 30px;
+    width: 100%;
+}
