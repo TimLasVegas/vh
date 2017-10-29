@@ -38,7 +38,7 @@ class SelectModel extends React.Component {
         return (
             <p>
                 <select id="model" class="form-control" onChange={this.handleChange.bind(this)} disabled={this.props.disabled}>
-                    {this.props.options.map((item, index) => (
+                    {this.props.options.map((item) => (
                         <option value={item.value}>{item.label}</option>
                     ))}
                 </select>
@@ -57,17 +57,7 @@ class ButtonSearch extends React.Component {
     handleClick(e) {
         var self = this;
         e.preventDefault();
-        // Use jQuery to scroll back to the top
-        $('#video-list').animate({
-            scrollTop: 0
-        }, 0);
-        // Search
-        var yt = new Youtube();
-        yt.search(this.props.make + ' ' + this.props.model).then(
-            function (results) {
-                self.props.handleClick(results);
-            }
-        );
+        self.props.handleClick();
     }
 
     render() {
@@ -94,18 +84,12 @@ class ListVideos extends React.Component {
     }
 
     handleMoreVideos() {
-        var self = this;
-        var yt = new Youtube();
-        yt.search(this.props.make + ' ' + this.props.model, this.props.nextPageToken).then(
-            function (results) {
-                self.props.handleSearch(results);
-            }
-        );
+        this.props.handleSearch({nextPageToken: this.props.nextPageToken});
     }
 
     render() {
         // We only display the More Videos button when we have more videos - sounds smart!
-        let moreVideos = (<div></div>);
+        let moreVideos = (<p></p>);
         if (isValidString(this.props.nextPageToken)) {
             moreVideos = (
                 <p>
@@ -132,15 +116,19 @@ class ListVideos extends React.Component {
 }
 
 /**
- * Called to play a video by insering the YouTube iFrame
+ * Called to play a video by inserting the YouTube iFrame
  * @prop    videoId     ID of the video to play
  */
 class PlayVideo extends React.Component {
     render() {
         if (isValidString(this.props.videoId)) {
-            var src = "http://www.youtube.com/embed/" + this.props.videoId + "?enablejsapi=1&origin=http://example.com&autoplay=1";
             return (
-                <iframe id="player" type="text/html" height="400px" width="100%" src={src} frameborder="0"></iframe>
+                <iframe
+                    id="player"
+                    type="text/html"
+                    height="400px" width="100%"
+                    src={"http://www.youtube.com/embed/" + this.props.videoId + "?enablejsapi=1&origin=http://example.com&autoplay=1"}
+                    frameborder="0"></iframe>
             )
         } else {
             return (
@@ -149,6 +137,51 @@ class PlayVideo extends React.Component {
         }
     }
 }
+
+/**
+ * List the additional keyword filters
+ * @prop    keywords    Keywords to act as additional filters
+ * @prop    filterString    All checked words combined as a filter string
+ * @prop    onChange    Call to make when they check/uncheck a filter keyword
+ *
+ */
+class FilterKeywords extends React.Component {
+    handleClick() {
+        // Build the string and return
+        this.props.onChange({
+            filterString: this.props.keywords.filter(function(word, index) {
+                                return ($("#filter-keyword-"+index).is(':checked'));
+                           }).join(' ')
+            }
+        );
+    }
+
+    render() {
+        var self = this;
+        return (
+            <div class="panel panel-info">
+                <div class="panel-heading">
+                    Additional Keyword Filters
+                </div>
+                <div class="filter-keywords panel-body">
+                    <ul>
+                    {this.props.keywords.map(function(word, index) {
+                        return (
+                            <li>
+                                <label>
+                                    <input type="checkbox" id={"filter-keyword-"+index} onClick={self.handleClick.bind(self)} />
+                                    {word}
+                                </label>
+                            </li>
+                        )
+                    })}
+                    </ul>
+                </div>
+            </div>
+        )
+    }
+}
+
 
 
 /**
@@ -167,7 +200,10 @@ class App extends React.Component {
                 { value: '', label: 'Model' }
             ],
             playVideoId: '',
-            nextPageToken: ''
+            nextPageToken: '',
+            filterKeywords: [],
+            filterString: ''
+
         };
     }
 
@@ -176,11 +212,10 @@ class App extends React.Component {
      * @param make
      */
     handleMakeChange(make) {
+        this.clearSearchResults();
         this.setState({
             selectedMake: make,
             selectedModel: '',
-            videos: [],
-            nextPageToken: '',
             disabledModel: (make == ''),
             disabledSearch: (make == '')
         });
@@ -224,23 +259,70 @@ class App extends React.Component {
      * @param model
      */
     handleModelChange(model) {
-        this.setState({
-            selectedModel: model,
-            videos: [],
-            nextPageToken: ''
-        });
+        this.setState({ selectedModel: model });
+        this.clearSearchResults();
     }
-
 
     /**
      * Called with new search results
-     * @param results   Videos that were received
+     * @param parms key/value pairs (nextPageToken, filterString)
      */
-    handleSearch(results) {
-        this.setState({
-            videos: this.state.videos.concat(results.items),
-            nextPageToken: (results.hasOwnProperty("nextPageToken")) ? results.nextPageToken : ''
-        });
+    search(parms) {
+        parms = (parms) ? parms : {};
+        let self = this;
+        let search = this.state.selectedMake  + ' ' + this.state.selectedModel;
+        let nextPageToken = null;
+        let filterString = this.state.filterString;
+        let newKeywords = true;
+
+        // Are we trying to get more results?
+        nextPageToken = (parms.hasOwnProperty('nextPageToken')) ? parms.nextPageToken : nextPageToken;
+
+        // Was there a change to the filterString? If so, we will clear the video listing.
+        if (parms.hasOwnProperty('filterString')) {
+            this.clearSearchResults(true);
+            filterString = parms.filterString;
+        }
+
+        // Is there an active filterString? If so, do not generate new keywords.
+        if (isValidString(filterString)) {
+            newKeywords = false;
+        }
+
+        // Update any changes to the filterString
+        this.setState({filterString: filterString});
+
+        // Add any filterString to the search string
+        search = search + ' ' + filterString;
+
+        // Search
+        if (debug) {
+            console.log(search);
+            console.log(nextPageToken);
+            console.log(filterString);
+            console.log('');
+        }
+        var yt = new Youtube();
+        yt.search(search, nextPageToken).then(
+            function (results) {
+                if (debug) console.log(results);
+                let newResults = self.state.videos.concat(results.items);
+                self.setState({
+                    videos: newResults,
+                    nextPageToken: (results.hasOwnProperty("nextPageToken") && results.items.length == 20) ? results.nextPageToken : ''
+                });
+
+                // Async call to develop the 10 most popular keywords, so we can offer additional filtering
+                // We only do this when filterKeywords is empty
+                if (newKeywords) {
+                    self.generateFilterKeywords(newResults)
+                        .then(function (keywords) {
+                                self.setState({filterKeywords: keywords});
+                            }
+                        );
+                }
+            }
+        );
     }
 
     /**
@@ -250,6 +332,63 @@ class App extends React.Component {
     playVideo(videoId) {
         this.setState({playVideoId: videoId});
     }
+
+    /**
+     * Clear the search results
+     * @param partial True when we just want to clear the array and nextPageToken
+     */
+    clearSearchResults(partial) {
+        this.setState({
+            videos: [],
+            nextPageToken: ''
+        });
+        if (!partial) {
+            this.setState({
+                filterKeywords: [],
+                filterString : ''
+            })
+        }
+    }
+
+    /**
+     * Build the filtering keywords from the search results.
+     * @param results
+     */
+    generateFilterKeywords(results) {
+        var make = this.state.selectedMake.toLowerCase();
+        var model = this.state.selectedModel.toLowerCase();
+        return new Promise(function(resolve) {
+            var list = [];
+            results.map(function(video) {
+                if (video.hasOwnProperty('snippet') && video.snippet.hasOwnProperty('title')) {
+                    video.snippet.title.split(' ').map(function(word) {
+                        // Get rid of any trailing commas and periods
+                        word = word.replace(/[,.:()]/,'').trim();
+                        // Ignore small words and the current make and model
+                        if (word.length > 5 && word.length < 15 && !(word.toLowerCase() == make || word.toLowerCase() == model)) {
+                            let index = list.findIndex(function(obj) {
+                                return obj.word == word;
+                            });
+                            // If found, increment the count.
+                            if (index >= 0) {
+                                list[index].count++;
+                            } else {
+                                // Add
+                                list.push({word: word, count: 1});
+                            }
+                        }
+                    });
+                }
+            });
+            // Sort the array
+            list = list.sort(function(a,b) {return (b.count - a.count)});
+            // Return the top 15
+            return resolve(list.slice(0,15).map(function(obj) {
+                return obj.word;
+            }));
+        });
+    }
+
 
     /**
      * Render
@@ -268,13 +407,25 @@ class App extends React.Component {
 
                 <div class="row content">
                     <div class="col-sm-3 search-options">
-                        <form id="search-form" action="#">
-                            <SelectMake handleChange={this.handleMakeChange.bind(this)}  />
-                            <SelectModel handleChange={this.handleModelChange.bind(this)} disabled={this.state.disabledModel}  options={this.state.optionsModel}/>
-                            <ButtonSearch make={this.state.selectedMake} model={this.state.selectedModel} disabled={this.state.disabledSearch} handleClick={this.handleSearch.bind(this)} />
-                        </form>
+                        <div class="panel panel-info">
+                            <div class="panel-heading">
+                                Search Options
+                            </div>
+                            <div class="panel-body">
+                                <form id="search-form" action="#">
+                                    <SelectMake handleChange={this.handleMakeChange.bind(this)}  />
+                                    <SelectModel handleChange={this.handleModelChange.bind(this)} disabled={this.state.disabledModel}  options={this.state.optionsModel}/>
+                                    <ButtonSearch make={this.state.selectedMake} model={this.state.selectedModel} disabled={this.state.disabledSearch} handleClick={this.search.bind(this)} />
+                                </form>
+                            </div>
+                        </div>
                         <div id="results"></div>
                         <div id="mobile-message" class="footer mobile-footer bg-info"></div>
+
+                        {/* Setup panel of additional keyword filters when they have search results */}
+                        <div>
+                            <FilterKeywords keywords={this.state.filterKeywords} onChange={this.search.bind(this)}/>
+                        </div>
                     </div>
 
                     <div class="col-sm-6 youtube">
@@ -282,13 +433,18 @@ class App extends React.Component {
                             <PlayVideo videoId={this.state.playVideoId} />
                         </div>
                         <div id="ad1">
-                            <span>Ad Space</span>
+                            <img src="assets/images/toyota_728x90.jpg" />
                         </div>
                     </div>
 
                     <div class="col-sm-3">
-                        <div id="video-list" class="col video-list">
-                            <ListVideos make={this.state.selectedMake} model={this.state.selectedModel} videos={this.state.videos} nextPageToken={this.state.nextPageToken} playVideo={this.playVideo.bind(this)} handleSearch={this.handleSearch.bind(this)}/>
+                        <div class="panel panel-info video-list">
+                            <div class="panel-heading">
+                                Search Results
+                            </div>
+                            <div class="panel-body">
+                                <ListVideos make={this.state.selectedMake} model={this.state.selectedModel} videos={this.state.videos} nextPageToken={this.state.nextPageToken} playVideo={this.playVideo.bind(this)} handleSearch={this.search.bind(this)}/>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -15,9 +15,11 @@ var Youtube = (function () {
             part: "snippet",
             type: "video",
             maxResults: 20,
-            publishedAfter: "2016-01-01T00:00:00Z",
+            publishedAfter: "2014-01-01T00:00:00Z",
             q: encodeURIComponent(search).replace(/%20/g, "+"),
-            order: "viewCount"
+            order: "viewCount",
+            regionCode: 'US',
+            relevanceLanguage: 'en'
         };
         if (isValidString(pageToken)) requestObject.pageToken = pageToken;
         var request = gapi.client.youtube.search.list(requestObject);

@@ -1,5 +1,7 @@
 'use strict';
 
+var debug = false; // Set to true to turn on console.log()
+
 /**
  * Run when the page is loaded
  */
